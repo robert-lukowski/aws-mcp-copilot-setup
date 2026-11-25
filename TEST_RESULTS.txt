@@ -1,0 +1,42 @@
+AWS MCP setup pilot 0.2.0 - validation report
+Date: 2026-11-25
+Runtime: PowerShell 7.4.13 on Linux
+
+PASS: 59 core assertions
+- JSON merge preserves other servers, root fields, tool restrictions and env.
+- Repeated configuration is idempotent.
+- Invalid JSON, duplicate profiles and remote/auth entries are rejected.
+- Custom flags, headers, wrappers and nonstandard proxy arguments are rejected without editing the entry.
+- Existing custom AWS paths are resolved consistently; explicit process paths win.
+- Rollback preserves unrelated later edits and refuses changes to its target.
+- Writes roundtrip with spaces/backslashes, use UTF-8 without BOM and atomic replacement.
+- Changed files are not overwritten by stale setup snapshots.
+- PowerShell source syntax parsed without errors.
+
+PASS: 11 mocked workflow assertions
+- Setup writes intended configuration and an applied rollback record.
+- Original configuration is backed up.
+- Re-running setup does not rewrite configuration or duplicate backups.
+- Rollback restores the server entry and retains unrelated later changes.
+- Unexpected AWS account identity stops setup without editing MCP configuration.
+
+PASS: 25 prerequisite assertions (mocked installer calls)
+- Exact allowlisted package IDs, no upgrades or automatic agreement acceptance.
+- Existing tools require no install, only missing dependencies are selected.
+- Existing npm Copilot is retained; process PATH refreshed after an install.
+- Declined installation, unavailable WinGet, nonzero/reboot-required exits stop.
+- Success without a discoverable executable is rejected.
+- New PowerShell files parse without syntax errors.
+
+Total: 95 assertions. WinGet calls are mocked, not real installations.
+
+Not tested here:
+- Windows BAT/PowerShell 5.1 bootstrap, WinGet installers, UAC, process resolution
+  and corporate execution policies.
+- Actual uv tool install / downloads / executable version detection.
+- Real AWS SSO browser login and STS responses.
+- Copilot MCP negotiation on a corporate workstation.
+
+No corporate AWS calls or Copilot AI requests were made during these tests.
+The underlying direct-proxy + timeout configuration had worked in the user's
+manual pilot; this installer still needs a Windows pilot before broad rollout.

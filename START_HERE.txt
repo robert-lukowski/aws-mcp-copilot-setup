@@ -1,0 +1,20 @@
+AWS MCP setup for GitHub Copilot CLI - Windows pilot
+
+1. Extract the ENTIRE ZIP to a local folder. Do not run inside the ZIP.
+2. Close running Copilot CLI sessions.
+3. Double-click setup.bat and choose 1 (Setup).
+4. Select the two AWS profiles. Complete browser SSO login if asked.
+5. Review the displayed account mapping and approve configuration.
+6. Start Copilot CLI yourself, open /mcp, then use the verification prompt.
+
+Prerequisites: PowerShell 7.2+, AWS CLI v2, uv and GitHub Copilot CLI.
+Missing tools can be installed via WinGet after confirmation. Existing tools
+are not automatically upgraded. WinGet must be available and allowed.
+If PowerShell 7 is missing, the BAT first offers its installation.
+Windows administrator or license prompts may appear; no policies are bypassed.
+If your company requires signed scripts, use its approved deployment process.
+
+Daily use: run setup.bat -> 3 to check AWS identities / renew SSO if needed.
+Rollback: run setup.bat -> 4 to restore the managed MCP server entry.
+
+Read README.md for team defaults, troubleshooting and validation limits.

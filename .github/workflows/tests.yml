@@ -1,0 +1,32 @@
+name: Offline tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: PowerShell tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Core configuration
+        shell: pwsh
+        run: ./tests/core.tests.ps1
+      - name: Mocked setup workflow
+        shell: pwsh
+        run: ./tests/workflow.tests.ps1
+      - name: Mocked prerequisites
+        shell: pwsh
+        run: ./tests/prerequisites.tests.ps1

@@ -1,0 +1,13 @@
+{
+  "serverName": "aws-mcp",
+  "proxyVersion": "2.0.0",
+  "timeoutMs": 120000,
+  "mcpRegion": "eu-central-1",
+  "defaultAwsRegion": "eu-central-1",
+  "ssoStartUrlHint": "",
+  "ssoRegionHint": "eu-central-1",
+  "profiles": [
+    { "label": "DEV", "suggestedName": "aws-dev", "expectedAccountId": "" },
+    { "label": "TEST", "suggestedName": "aws-test", "expectedAccountId": "" }
+  ]
+}
