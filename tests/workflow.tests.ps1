@@ -14,7 +14,7 @@ function Confirm { param($Question,$Default) return $true }
 function Select-Profile { param($Template) return $Template.suggestedName }
 function Test-Identity {
     param($Profile,$AllowLogin)
-    $account=if ($Profile -eq 'aws-dev') {'111111111111'} else {'222222222222'}
+    $account=if ($script:SameAccount) {'111111111111'} elseif ($Profile -eq $script:Team.profiles[0].suggestedName) {'111111111111'} else {'222222222222'}
     return @{Account=$account;Arn="arn:aws:sts::${account}:assumed-role/TestRole/TestSession"}
 }
 function Ensure-Proxy { return 'C:\test\mcp-proxy-for-aws-cli.exe' }
@@ -25,6 +25,7 @@ $script:Team=Read-JsonMap (Join-Path $PSScriptRoot '..\team-config.json')
 $script:ConfigPath=Join-Path $temp 'copilot\mcp-config.json'
 $script:StateRoot=Join-Path $temp 'backups'
 $script:passes=0
+$script:SameAccount=$false
 function Assert($Condition,$Message) {
     if (-not $Condition) { throw "FAIL: $Message" }
     $script:passes++; Write-Host "PASS: $Message"
@@ -61,6 +62,20 @@ try {
     try { Run-Setup } catch { $failed=$true }
     Assert $failed 'wrong account stops workflow'
     Assert ((Get-FileFingerprint $script:ConfigPath) -eq $hash) 'wrong account leaves config untouched'
+    $script:Team.profiles[0].expectedAccountId=''
+    $script:Team.profiles[0].suggestedName='readonly'
+    $script:Team.profiles[1].suggestedName='operator'
+    $script:SameAccount=$true
+    Run-Setup
+    $current=Read-Mcp
+    Assert ($current.mcpServers['aws-mcp'].env.AWS_MCP_PROXY_PROFILES -ceq 'readonly operator') 'arbitrary profile names and same-account roles are accepted in order'
+    $hash=Get-FileFingerprint $script:ConfigPath
+    $script:Team.profiles[1].suggestedName='readonly'
+    $failed=$false
+    try { Run-Setup } catch { $failed=$true }
+    Assert $failed 'duplicate profile names stop setup'
+    Assert ((Get-FileFingerprint $script:ConfigPath) -eq $hash) 'duplicate profiles leave config untouched'
+
 } finally {
     foreach ($key in $savedPaths.Keys) { [Environment]::SetEnvironmentVariable($key,$savedPaths[$key]) }
     if (Test-Path -LiteralPath $temp) { Remove-Item -LiteralPath $temp -Recurse -Force }

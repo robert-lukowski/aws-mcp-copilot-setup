@@ -1,5 +1,5 @@
 AWS MCP setup pilot 0.2.0 - validation report
-Date: 2026-11-25
+Date: 2026-11-26
 Runtime: PowerShell 7.4.13 on Linux
 
 PASS: 59 core assertions
@@ -13,12 +13,14 @@ PASS: 59 core assertions
 - Changed files are not overwritten by stale setup snapshots.
 - PowerShell source syntax parsed without errors.
 
-PASS: 11 mocked workflow assertions
+PASS: 14 mocked workflow assertions
 - Setup writes intended configuration and an applied rollback record.
 - Original configuration is backed up.
 - Re-running setup does not rewrite configuration or duplicate backups.
 - Rollback restores the server entry and retains unrelated later changes.
 - Unexpected AWS account identity stops setup without editing MCP configuration.
+- Arbitrary profile names and same-account profiles are accepted in order.
+- Duplicate profile names stop setup without editing MCP configuration.
 
 PASS: 25 prerequisite assertions (mocked installer calls)
 - Exact allowlisted package IDs, no upgrades or automatic agreement acceptance.
@@ -28,7 +30,7 @@ PASS: 25 prerequisite assertions (mocked installer calls)
 - Success without a discoverable executable is rejected.
 - New PowerShell files parse without syntax errors.
 
-Total: 95 assertions. WinGet calls are mocked, not real installations.
+Total: 98 assertions. WinGet calls are mocked, not real installations.
 
 Not tested here:
 - Windows BAT/PowerShell 5.1 bootstrap, WinGet installers, UAC, process resolution

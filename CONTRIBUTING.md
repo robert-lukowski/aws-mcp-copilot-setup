@@ -21,7 +21,7 @@ Use a test workstation and two AWS accounts you are authorized to access:
 - Start with existing prerequisites, then separately test a machine missing prerequisites.
 - Test an existing npm Copilot install; setup should not add another Copilot copy.
 - Select existing profiles and, separately, configure new profiles with the AWS wizard.
-- Confirm both STS identities and the displayed DEV/TEST mapping.
+- Confirm both STS identities and the displayed profile-to-account mapping.
 - Check that unrelated MCP servers and existing restrictions survive setup.
 - Start Copilot twice, then repeat after a workstation restart.
 - Verify both identities through MCP using the README prompt.

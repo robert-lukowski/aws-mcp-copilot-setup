@@ -169,10 +169,10 @@ function Run-Setup {
         Write-Host "AWS configuration override used for BOTH verification and MCP: $key=$($effectivePaths[$key])"
         [Environment]::SetEnvironmentVariable($key,$effectivePaths[$key])
     }
-    $selected = @(); $accounts = @()
+    $selected = @()
     foreach ($template in $script:Team.profiles) {
         $profile = Select-Profile $template
-        if ($selected -contains $profile) { throw 'DEV and TEST must use distinct profile names.' }
+        if ($selected -contains $profile) { throw 'Choose two distinct profile names.' }
         $identity = Test-Identity $profile $true
         Write-Host "$($template.label): profile=$profile; account=$($identity.Account)"
         Write-Host "Role/session ARN: $($identity.Arn)"
@@ -180,9 +180,8 @@ function Run-Setup {
             throw "Account mismatch for $($template.label). Expected $($template.expectedAccountId); received $($identity.Account)."
         }
         if (-not $template.expectedAccountId -and -not (Confirm "Confirm this is the intended $($template.label) account")) { throw 'Account mapping not confirmed.' }
-        $selected += $profile; $accounts += $identity.Account
+        $selected += $profile
     }
-    if ($accounts[0] -eq $accounts[1]) { throw 'Both profiles resolve to the same account. This DEV/TEST installer expects separate accounts.' }
     Write-Host "`nDefault profile: $($selected[0]). Switchable profile: $($selected[1])."
     Write-Host "Endpoint: https://aws-mcp.$($script:Team.mcpRegion).api.aws/mcp"
     Write-Host "Proxy: $($script:Team.proxyVersion); timeout: $($script:Team.timeoutMs) ms."
@@ -300,7 +299,7 @@ try {
     Write-Host "`nAWS MCP / Copilot CLI setup - pilot 0.2.0" -ForegroundColor Cyan
     Write-Host 'Direct proxy executable; tested package version; 120-second connection budget by default.'
     if ($Mode -eq 'Menu') {
-        Write-Host "`n1. Set up DEV/TEST MCP`n2. Check local configuration (no AWS calls)`n3. Check AWS identities / log in if needed`n4. Roll back MCP configuration`n0. Exit"
+        Write-Host "`n1. Set up MCP with two AWS profiles`n2. Check local configuration (no AWS calls)`n3. Check AWS identities / log in if needed`n4. Roll back MCP configuration`n0. Exit"
         $Mode = switch (Read-Host 'Choose [1-4, 0]') { '1' {'Setup'} '2' {'Check'} '3' {'Login'} '4' {'Rollback'} default {'Exit'} }
     }
     switch ($Mode) {

@@ -2,7 +2,7 @@
 
 An interactive Windows setup assistant for **AWS MCP + GitHub Copilot CLI**, using IAM Identity Center profiles and SigV4 authentication.
 
-Select your DEV and TEST profiles, verify the accounts, and let setup configure the local proxy. Missing tools can be installed through WinGet after confirmation. Existing MCP servers are preserved and the managed entry can be rolled back.
+Select any two AWS profiles, verify the accounts, and let setup configure the local proxy. Missing tools can be installed through WinGet after confirmation. Existing MCP servers are preserved and the managed entry can be rolled back.
 
 **Status: community beta, v0.2.0.** Offline tests cover configuration, prerequisites and workflow behavior. The installer still needs an end-to-end Windows pilot; see [validation results](TEST_RESULTS.txt). This is an independent community project, not an official AWS or GitHub product.
 
@@ -13,8 +13,8 @@ This installs/reuses the AWS MCP Proxy locally, selects two AWS profiles and con
 1. Download this repository using **Code → Download ZIP** (or clone it), then extract the **entire ZIP** into a local directory.
 2. Close existing Copilot CLI sessions.
 3. Double-click **setup.bat**, choose **1** and follow the prompts.
-4. Choose the DEV profile, then TEST. You may select any existing profile names, for example `project-dev` and `project-test`; they do not need to be renamed.
-5. Complete SSO in your own browser if required. Verify the account shown for each environment. The default profile will be the first one (DEV).
+4. Choose the first profile, then the second. Use any existing profile names, such as `sandbox` and `production`, or `readonly` and `operator`; they do not need to be renamed. The suggested names for new profiles are `profile-1` and `profile-2`.
+5. Complete SSO in your own browser if required. Verify the account and role shown for each profile. The first selected profile is the default.
 6. Confirm installation/configuration. Reopen Copilot CLI in your usual project and check `/mcp`.
 7. Use the prompt printed by setup to check both identities **through MCP**.
 
@@ -67,7 +67,7 @@ Scripts must be permitted by your organization's execution policy. `setup.bat` d
 | 3 / Login | Call STS for configured profiles, offer SSO login on failure, report account/ARN |
 | 4 / Rollback | Restore only a server entry managed by a previous setup run |
 
-Mode 3 displays the actual identities; it does not re-confirm the DEV/TEST mapping against team defaults. Use Setup to enforce the configured expected account IDs again.
+Mode 3 displays the actual identities; it does not re-confirm the profile-to-account mapping against team defaults. Use Setup to enforce the configured expected account IDs again.
 
 From PowerShell 7, optional direct commands are:
 
@@ -93,10 +93,11 @@ Edit `team-config.json` before distributing the package:
 | `defaultAwsRegion` | Default AWS operation region; may differ from the endpoint region. |
 | `ssoStartUrlHint` | Optional corporate AWS access portal URL, supplied by your cloud team. Displayed as a wizard hint only. |
 | `ssoRegionHint` | Identity Center directory region, not necessarily the resource region. Displayed as a hint. |
+| `profiles[].label` | Display label in setup; defaults to `Profile 1` and `Profile 2`. Customize freely. |
 | `profiles[].suggestedName` | Suggested local profile name; users can choose an existing alternative. |
 | `profiles[].expectedAccountId` | Optional 12-digit ID from the AWS access portal/account inventory. Wrong identities stop setup. Blank means the user must confirm the mapping. |
 
-The JSON intentionally has blank account IDs and no assumed permission-set name. Two distinct accounts are required by this DEV/TEST pilot. Names with whitespace are not accepted because the proxy profile allowlist is whitespace-separated.
+The JSON intentionally has blank account IDs and no assumed permission-set name. This installer supports two distinct profile names. They may refer to different accounts or different roles in the same account. Names with whitespace are not accepted because the proxy profile allowlist is whitespace-separated.
 
 The first selected profile is the default when an MCP call omits `aws_profile`. Always name the target account/profile in agent tasks. MCP configuration does not reduce or expand IAM permissions; `tools: ["*"]` on a new entry does not imply read-only access. Existing `tools` restrictions are retained.
 
@@ -126,9 +127,9 @@ Repeated Setup with the same effective configuration does not duplicate entries 
 
 ## Final verification in Copilot
 
-The installer uses AWS CLI STS to verify credentials and account mapping. **That is not an MCP test.** Reopen Copilot and check `/mcp`. Once connected, use a prompt such as:
+The installer uses AWS CLI STS to verify credentials and account mapping. **That is not an MCP test.** Reopen Copilot and check `/mcp`. Once connected, use a prompt such as the following, replacing `profile-1` and `profile-2` with your selected names:
 
-> Use only MCP aws-mcp. Call STS GetCallerIdentity separately with aws_profile=aws-dev and aws_profile=aws-test. Return account and ARN for each. Do not use shell or AWS CLI. Do not modify AWS resources.
+> Use only MCP aws-mcp. Call STS GetCallerIdentity separately with aws_profile=profile-1 and aws_profile=profile-2. Return account and ARN for each. Do not use shell or AWS CLI. Do not modify AWS resources.
 
 Substitute the actual server/profile names. Normal Copilot usage may be billed for this prompt.
 

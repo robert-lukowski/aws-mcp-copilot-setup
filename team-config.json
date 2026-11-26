@@ -7,7 +7,7 @@
   "ssoStartUrlHint": "",
   "ssoRegionHint": "eu-central-1",
   "profiles": [
-    { "label": "DEV", "suggestedName": "aws-dev", "expectedAccountId": "" },
-    { "label": "TEST", "suggestedName": "aws-test", "expectedAccountId": "" }
+    { "label": "Profile 1", "suggestedName": "profile-1", "expectedAccountId": "" },
+    { "label": "Profile 2", "suggestedName": "profile-2", "expectedAccountId": "" }
   ]
 }
