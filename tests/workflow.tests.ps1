@@ -76,6 +76,22 @@ try {
     Assert $failed 'duplicate profile names stop setup'
     Assert ((Get-FileFingerprint $script:ConfigPath) -eq $hash) 'duplicate profiles leave config untouched'
 
+
+    foreach ($size in @(3,5)) {
+        $script:Team.profiles=@(1..$size | ForEach-Object { @{label="Profile $_";suggestedName="profile-$_";expectedAccountId=''} })
+        Run-Setup
+        $current=Read-Mcp
+        $names=@($script:Team.profiles | ForEach-Object { $_.suggestedName })
+        Assert ($current.mcpServers['aws-mcp'].env.AWS_MCP_PROXY_PROFILES -ceq ($names -join ' ')) "workflow saves all $size profiles"
+        $printed=(Show-FinalPrompt $names 6>&1 | Out-String)
+        Assert ($printed.Contains(($names -join ', '))) "verification prompt includes all $size profiles"
+    }
+    $hash=Get-FileFingerprint $script:ConfigPath
+    $script:Team.profiles[4].expectedAccountId='333333333333'
+    $failed=$false
+    try { Run-Setup } catch { $failed=$true }
+    Assert $failed 'wrong account on fifth profile stops setup'
+    Assert ((Get-FileFingerprint $script:ConfigPath) -eq $hash) 'wrong fifth account leaves config untouched'
 } finally {
     foreach ($key in $savedPaths.Keys) { [Environment]::SetEnvironmentVariable($key,$savedPaths[$key]) }
     if (Test-Path -LiteralPath $temp) { Remove-Item -LiteralPath $temp -Recurse -Force }

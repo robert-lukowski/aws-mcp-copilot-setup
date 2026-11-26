@@ -2,21 +2,21 @@
 
 An interactive Windows setup assistant for **AWS MCP + GitHub Copilot CLI**, using IAM Identity Center profiles and SigV4 authentication.
 
-Select any two AWS profiles, verify the accounts, and let setup configure the local proxy. Missing tools can be installed through WinGet after confirmation. Existing MCP servers are preserved and the managed entry can be rolled back.
+Select two or more AWS profiles, verify the accounts, and let setup configure the local proxy. Missing tools can be installed through WinGet after confirmation. Existing MCP servers are preserved and the managed entry can be rolled back.
 
 **Status: community beta, v0.2.0.** Offline tests cover configuration, prerequisites and workflow behavior. The installer still needs an end-to-end Windows pilot; see [validation results](TEST_RESULTS.txt). This is an independent community project, not an official AWS or GitHub product.
 
-This installs/reuses the AWS MCP Proxy locally, selects two AWS profiles and configures Copilot CLI to launch the proxy executable directly. It uses proxy package `2.0.0` and a Copilot server `timeout` of `120000` milliseconds by default. It does not install Docker, switch to OAuth or configure VS Code Chat.
+This installs/reuses the AWS MCP Proxy locally, selects two or more AWS profiles and configures Copilot CLI to launch the proxy executable directly. It uses proxy package `2.0.0` and a Copilot server `timeout` of `120000` milliseconds by default. It does not install Docker, switch to OAuth or configure VS Code Chat.
 
 ## Quick start
 
 1. Download this repository using **Code → Download ZIP** (or clone it), then extract the **entire ZIP** into a local directory.
 2. Close existing Copilot CLI sessions.
 3. Double-click **setup.bat**, choose **1** and follow the prompts.
-4. Choose the first profile, then the second. Use any existing profile names, such as `sandbox` and `production`, or `readonly` and `operator`; they do not need to be renamed. The suggested names for new profiles are `profile-1` and `profile-2`.
+4. By default, choose two profiles. For 3, 4, 5 or more, add entries to `profiles` in `team-config.json` before starting setup (see below). Choose each profile when prompted. Use any existing profile names, such as `sandbox` and `production`, or `readonly` and `operator`; they do not need to be renamed. The suggested names for new profiles are `profile-1` and `profile-2`.
 5. Complete SSO in your own browser if required. Verify the account and role shown for each profile. The first selected profile is the default.
 6. Confirm installation/configuration. Reopen Copilot CLI in your usual project and check `/mcp`.
-7. Use the prompt printed by setup to check both identities **through MCP**.
+7. Use the prompt printed by setup to check all selected identities **through MCP**.
 
 Setup first reuses installed tools and offers to install only missing prerequisites through WinGet. It then reuses existing profiles. If a profile is missing, choose **N** to open the AWS CLI SSO configuration wizard. The wizard lets the user choose their assigned account and role. It may open a browser. Separate SSO portals/sessions are supported by configuring each profile through the wizard. Administrator access is not a prerequisite.
 
@@ -62,7 +62,7 @@ Scripts must be permitted by your organization's execution policy. `setup.bat` d
 
 | Mode | Action |
 |---|---|
-| 1 / Setup | Select or create two profiles, check identities, install/reuse proxy, back up and merge MCP configuration |
+| 1 / Setup | Select or create profiles, check identities, install/reuse proxy, back up and merge MCP configuration |
 | 2 / Check | Inspect installed tools and local MCP configuration; does not log in, call AWS or start MCP |
 | 3 / Login | Call STS for configured profiles, offer SSO login on failure, report account/ARN |
 | 4 / Rollback | Restore only a server entry managed by a previous setup run |
@@ -97,9 +97,46 @@ Edit `team-config.json` before distributing the package:
 | `profiles[].suggestedName` | Suggested local profile name; users can choose an existing alternative. |
 | `profiles[].expectedAccountId` | Optional 12-digit ID from the AWS access portal/account inventory. Wrong identities stop setup. Blank means the user must confirm the mapping. |
 
-The JSON intentionally has blank account IDs and no assumed permission-set name. This installer supports two distinct profile names. They may refer to different accounts or different roles in the same account. Names with whitespace are not accepted because the proxy profile allowlist is whitespace-separated.
+The JSON intentionally has blank account IDs and no assumed permission-set name. This installer supports two or more distinct profile names. They may refer to different accounts or different roles in the same account. Names with whitespace are not accepted because the proxy profile allowlist is whitespace-separated.
 
 The first selected profile is the default when an MCP call omits `aws_profile`. Always name the target account/profile in agent tasks. MCP configuration does not reduce or expand IAM permissions; `tools: ["*"]` on a new entry does not imply read-only access. Existing `tools` restrictions are retained.
+
+## Adding more profiles later
+
+### Using the installer
+
+The default `team-config.json` contains two profile templates. To select three, four, five or more profiles, add entries to its `profiles` array. For example, replace that array with:
+
+```json
+"profiles": [
+  { "label": "Profile 1", "suggestedName": "profile-1", "expectedAccountId": "" },
+  { "label": "Profile 2", "suggestedName": "profile-2", "expectedAccountId": "" },
+  { "label": "Profile 3", "suggestedName": "profile-3", "expectedAccountId": "" },
+  { "label": "Profile 4", "suggestedName": "profile-4", "expectedAccountId": "" },
+  { "label": "Profile 5", "suggestedName": "profile-5", "expectedAccountId": "" }
+]
+```
+
+This is a JSON fragment, not a complete file. Keep the other fields in `team-config.json`. Remove unused entries for a three- or four-profile setup. Labels and suggested names can be customized; setup still lets you select existing names.
+
+Close Copilot CLI, run `setup.bat` and choose **1 (Setup)**. Select every profile you want to keep, including the existing ones. Setup verifies every identity, backs up the MCP configuration and writes the complete allowlist. The first selected profile remains the default.
+
+### Editing an existing MCP configuration manually
+
+1. Configure a missing profile with `aws configure sso --profile profile-3`, or choose one from `aws configure list-profiles`.
+2. Log in when needed with `aws sso login --profile profile-3`. Run `aws sts get-caller-identity --profile profile-3` and verify its account and role. Repeat for each additional profile. Substitute your own profile names.
+3. Close Copilot CLI and make a backup of its `mcp-config.json` (normally `%USERPROFILE%\.copilot\mcp-config.json`, or inside your configured `COPILOT_HOME`).
+4. In the existing `mcpServers` → `aws-mcp` → `env` object, update only this value, retaining every profile you want available:
+
+```json
+"AWS_MCP_PROXY_PROFILES": "profile-1 profile-2 profile-3 profile-4 profile-5"
+```
+
+Use the actual server name if you customized it. Separate names with spaces, not commas; do not duplicate names. Keep other environment variables, command, args, timeout and tool restrictions intact. The first name is the default when a call omits `aws_profile`. Adding a profile does not grant IAM permissions.
+
+5. Start a fresh Copilot CLI session so the proxy loads the new allowlist. Check `/mcp`, then ask it to call STS GetCallerIdentity **through MCP** for each listed profile using explicit `aws_profile` values. AWS CLI STS success alone does not verify MCP.
+
+If you use the installer again, update `team-config.json` to include all profiles you want to retain; Setup writes the profiles selected during that run. Manual edits also cause an older installer rollback to refuse overwriting the modified entry. Use your manual backup to undo a manual change.
 
 ## Changes and rollback
 

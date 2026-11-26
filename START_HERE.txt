@@ -2,8 +2,10 @@ AWS MCP setup for GitHub Copilot CLI - Windows pilot
 
 1. Extract the ENTIRE ZIP to a local folder. Do not run inside the ZIP.
 2. Close running Copilot CLI sessions.
+   For 3-5 or more profiles, extend the profiles array in team-config.json first.
+   See README.md: Adding more profiles later.
 3. Double-click setup.bat and choose 1 (Setup).
-4. Select the two AWS profiles. Complete browser SSO login if asked.
+4. Select each AWS profile. Complete browser SSO login if asked.
 5. Review the displayed account mapping and approve configuration.
 6. Start Copilot CLI yourself, open /mcp, then use the verification prompt.
 

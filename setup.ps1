@@ -90,7 +90,7 @@ function Select-Profile($Template) {
             if ($available -contains $name) { Write-Host 'That profile exists; select it instead.'; continue }
             if ($script:Team.ssoStartUrlHint) { Write-Host "SSO portal hint: $($script:Team.ssoStartUrlHint)" }
             Write-Host "SSO region hint: $($script:Team.ssoRegionHint). Use your assigned account and permission set."
-            Write-Host 'The AWS wizard may open your browser and writes AWS config/cache. Use the same SSO session for both profiles if appropriate.'
+            Write-Host 'The AWS wizard may open your browser and writes AWS config/cache. Use the same SSO session for the profiles if appropriate.'
             $awsConfig = Get-AwsConfigPath
             if (Test-Path -LiteralPath $awsConfig) {
                 $backup = $awsConfig + '.before-mcp-setup-' + [guid]::NewGuid().ToString('N') + '.bak'
@@ -149,7 +149,7 @@ function Show-FinalPrompt([string[]]$Profiles) {
     Write-Host "`nNEXT: Start a fresh Copilot CLI session in your usual project and open /mcp." -ForegroundColor Cyan
     Write-Host 'No paid prompt or Copilot session has been launched by this installer.'
     Write-Host 'Once connected, paste this prompt (normal Copilot usage charges may apply):'
-    Write-Host "Use only MCP $($script:Team.serverName). Call STS GetCallerIdentity separately with aws_profile=$($Profiles[0]) and aws_profile=$($Profiles[1]). Return account and ARN for each. Do not use shell or AWS CLI. Do not modify AWS resources."
+    Write-Host "Use only MCP $($script:Team.serverName). Call STS GetCallerIdentity separately for every profile in this list, setting aws_profile explicitly: $($Profiles -join ', '). Return account and ARN for each. Do not use shell or AWS CLI. Do not modify AWS resources."
     Write-Host 'Setup/STS success does NOT prove that Copilot MCP negotiation works.' -ForegroundColor Yellow
 }
 
@@ -172,7 +172,7 @@ function Run-Setup {
     $selected = @()
     foreach ($template in $script:Team.profiles) {
         $profile = Select-Profile $template
-        if ($selected -contains $profile) { throw 'Choose two distinct profile names.' }
+        if ($selected -contains $profile) { throw 'Choose distinct profile names.' }
         $identity = Test-Identity $profile $true
         Write-Host "$($template.label): profile=$profile; account=$($identity.Account)"
         Write-Host "Role/session ARN: $($identity.Arn)"
@@ -182,7 +182,7 @@ function Run-Setup {
         if (-not $template.expectedAccountId -and -not (Confirm "Confirm this is the intended $($template.label) account")) { throw 'Account mapping not confirmed.' }
         $selected += $profile
     }
-    Write-Host "`nDefault profile: $($selected[0]). Switchable profile: $($selected[1])."
+    Write-Host "`nDefault profile: $($selected[0]). Available profiles: $($selected -join ', ')."
     Write-Host "Endpoint: https://aws-mcp.$($script:Team.mcpRegion).api.aws/mcp"
     Write-Host "Proxy: $($script:Team.proxyVersion); timeout: $($script:Team.timeoutMs) ms."
     Write-Host "Target: $script:ConfigPath (only '$($script:Team.serverName)' is managed)."
@@ -299,7 +299,7 @@ try {
     Write-Host "`nAWS MCP / Copilot CLI setup - pilot 0.2.0" -ForegroundColor Cyan
     Write-Host 'Direct proxy executable; tested package version; 120-second connection budget by default.'
     if ($Mode -eq 'Menu') {
-        Write-Host "`n1. Set up MCP with two AWS profiles`n2. Check local configuration (no AWS calls)`n3. Check AWS identities / log in if needed`n4. Roll back MCP configuration`n0. Exit"
+        Write-Host "`n1. Set up MCP with AWS profiles`n2. Check local configuration (no AWS calls)`n3. Check AWS identities / log in if needed`n4. Roll back MCP configuration`n0. Exit"
         $Mode = switch (Read-Host 'Choose [1-4, 0]') { '1' {'Setup'} '2' {'Check'} '3' {'Login'} '4' {'Rollback'} default {'Exit'} }
     }
     switch ($Mode) {

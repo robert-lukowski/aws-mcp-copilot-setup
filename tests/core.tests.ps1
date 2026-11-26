@@ -27,6 +27,19 @@ Assert ($result.mcpServers['aws-mcp'].args[0] -eq 'https://aws-mcp.eu-central-1.
 Assert ($result.mcpServers['aws-mcp'].deferTools -eq 'never') 'unknown local field preserved'
 $repeat=New-McpConfig $result 'aws-mcp' $result.mcpServers['aws-mcp'].command @('dev','test') $team
 Assert ((Get-EntryHash $repeat) -eq (Get-EntryHash $result)) 'merge is idempotent'
+
+foreach ($size in @(3,5)) {
+    $many=Copy-JsonValue $team
+    $many.profiles=@(1..$size | ForEach-Object { @{label="Profile $_";suggestedName="profile-$_";expectedAccountId=''} })
+    Assert-TeamConfig $many
+    $names=@($many.profiles | ForEach-Object { $_.suggestedName })
+    $merged=New-McpConfig $original 'aws-mcp' 'proxy.exe' $names $many
+    Assert ($merged.mcpServers['aws-mcp'].env.AWS_MCP_PROXY_PROFILES -ceq ($names -join ' ')) "$size profiles retain allowlist order"
+}
+Assert-Throws { New-McpConfig $original 'aws-mcp' 'proxy.exe' @('a','b','c','b') $team } 'duplicate beyond second profile rejected'
+$single=Copy-JsonValue $team
+$single.profiles=@($single.profiles[0])
+Assert-Throws { Assert-TeamConfig $single } 'single template rejected by multi-profile installer'
 # Known uvx forms can migrate to direct execution without dropping custom flags.
 foreach ($package in @('mcp-proxy-for-aws-cli','mcp-proxy-for-aws-cli@2.0.0','mcp-proxy-for-aws-cli==2.0.0')) {
     $legacy=Copy-JsonValue $original

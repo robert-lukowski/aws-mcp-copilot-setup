@@ -64,7 +64,7 @@ function Assert-TeamConfig($Team) {
     }
     if ($Team.timeoutMs -isnot [long] -and $Team.timeoutMs -isnot [int]) { throw 'timeoutMs must be an integer.' }
     if ($Team.timeoutMs -lt 60000 -or $Team.timeoutMs -gt 600000) { throw 'Use timeoutMs between 60000 and 600000.' }
-    if (@($Team.profiles).Count -ne 2) { throw 'This installer supports exactly two profiles.' }
+    if (@($Team.profiles).Count -lt 2) { throw 'Configure at least two profiles.' }
     foreach ($item in $Team.profiles) {
         if (-not $item.label -or -not $item.suggestedName -or -not $item.Contains('expectedAccountId')) { throw 'Incomplete profile template.' }
         Assert-ProfileName $item.suggestedName
@@ -93,7 +93,7 @@ function Assert-ExistingProxyInvocation($Entry, [string]$ServerName) {
 }
 
 function New-McpConfig($Original, [string]$ServerName, [string]$ProxyPath, [string[]]$Profiles, $Team) {
-    if ($Profiles.Count -ne 2 -or $Profiles[0] -eq $Profiles[1]) { throw 'Choose two distinct profiles.' }
+    if ($Profiles.Count -lt 2 -or @($Profiles | Sort-Object -Unique).Count -ne $Profiles.Count) { throw 'Choose at least two distinct profiles.' }
     foreach ($p in $Profiles) { Assert-ProfileName $p }
     $result = Copy-JsonValue $Original
     if (-not $result.Contains('mcpServers')) { $result['mcpServers'] = [ordered]@{} }
