@@ -9,6 +9,48 @@ Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot 'core.ps1')
 . (Join-Path $PSScriptRoot 'prerequisites.ps1')
 
+function Show-Banner {
+    Write-Host ''
+    Write-Host '  [ MCP ] ' -ForegroundColor Cyan -NoNewline
+    Write-Host 'AWS MCP SETUP' -ForegroundColor White -NoNewline
+    Write-Host '  /  0.2.2 beta' -ForegroundColor DarkGray
+    Write-Host '          Connect your AWS profiles to Copilot CLI' -ForegroundColor Gray
+    Write-Host '          Community project | Windows | SigV4' -ForegroundColor DarkGray
+    Write-Host ''
+}
+
+function Write-Section([string]$Title) {
+    Write-Host "`n  $Title" -ForegroundColor Cyan
+    Write-Host ('  ' + ('-' * 54)) -ForegroundColor DarkGray
+}
+
+function Write-Status([string]$Status, [string]$Message, [ConsoleColor]$Color = 'Green') {
+    Write-Host "  [$Status] " -ForegroundColor $Color -NoNewline
+    Write-Host $Message
+}
+
+function Show-MainMenu {
+    Write-Section 'WHAT WOULD YOU LIKE TO DO?'
+    foreach ($item in @(
+        @('1','Set up AWS MCP','Select profiles and save configuration'),
+        @('2','Check local setup','Inspect configuration; no AWS calls'),
+        @('3','Check AWS access','Verify identities and renew SSO if needed'),
+        @('4','Restore a backup','Roll back the managed MCP entry'),
+        @('0','Exit','Close without running a task')
+    )) {
+        Write-Host "  $($item[0])  " -ForegroundColor Cyan -NoNewline
+        Write-Host $item[1] -ForegroundColor White
+        Write-Host "     $($item[2])" -ForegroundColor DarkGray
+    }
+    Write-Host "`n  Choose 2 for a first check of an existing setup." -ForegroundColor Gray
+}
+
+function Show-ProfileSummary([object[]]$Rows) {
+    Write-Section 'AWS PROFILES'
+    $Rows | Format-Table -Property Profile, Account, Status -AutoSize -Wrap | Out-Host
+    Write-Host '  The first profile is the default for calls without aws_profile.' -ForegroundColor DarkGray
+}
+
 function Confirm([string]$Question, [bool]$Default = $false) {
     $suffix = if ($Default) { '[Y/n]' } else { '[y/N]' }
     $answer = Read-Host "$Question $suffix"
@@ -26,10 +68,11 @@ function Find-Tools([switch]$InstallMissing) {
     $script:Aws = Find-Dependency 'Amazon.AWSCLI'
     $script:Uv = Find-Dependency 'astral-sh.uv'
     $script:Copilot = Find-Dependency 'GitHub.Copilot'
+    Write-Section 'LOCAL TOOLS'
     $missing = @()
     foreach ($item in @(@('AWS CLI', $script:Aws, 'Amazon.AWSCLI'), @('uv', $script:Uv, 'astral-sh.uv'), @('Copilot CLI', $script:Copilot, 'GitHub.Copilot'))) {
-        if ($item[1]) { Write-Host ("[FOUND] {0}: {1}" -f $item[0],$item[1]) }
-        else { Write-Host "[MISSING] $($item[0])" -ForegroundColor Yellow; $missing += $item[2] }
+        if ($item[1]) { Write-Verbose ("{0}: {1}" -f $item[0],$item[1]) }
+        else { Write-Status 'MISSING' $item[0] Yellow; $missing += $item[2] }
     }
     if ($missing.Count) {
         if (-not $InstallMissing) {
@@ -44,11 +87,12 @@ function Find-Tools([switch]$InstallMissing) {
     }
     $version = Capture $script:Aws @('--version')
     if ($version.Code -ne 0 -or $version.Text -notmatch 'aws-cli/2\.') { throw 'The detected AWS CLI is not a working v2 installation. Resolve its version/PATH through your approved software channel; no automatic upgrade was attempted.' }
-    Write-Host $version.Text
+    Write-Verbose $version.Text
+    Write-Status 'OK' (($version.Text -split '\s+')[0])
     foreach ($exe in @($script:Uv,$script:Copilot)) {
         $r = Capture $exe @('--version')
         if ($r.Code -ne 0) { throw "Could not run --version for $exe" }
-        Write-Host (($r.Text -split "`n")[0])
+        Write-Status 'OK' (($r.Text -split "`n")[0])
     }
     return $true
 }
@@ -146,11 +190,19 @@ function Ensure-Proxy {
 }
 
 function Show-FinalPrompt([string[]]$Profiles) {
-    Write-Host "`nNEXT: Start a fresh Copilot CLI session in your usual project and open /mcp." -ForegroundColor Cyan
-    Write-Host 'No paid prompt or Copilot session has been launched by this installer.'
-    Write-Host 'Once connected, paste this prompt (normal Copilot usage charges may apply):'
-    Write-Host "Use only MCP $($script:Team.serverName). Call STS GetCallerIdentity separately for every profile in this list, setting aws_profile explicitly: $($Profiles -join ', '). Return account and ARN for each. Do not use shell or AWS CLI. Do not modify AWS resources."
-    Write-Host 'Setup/STS success does NOT prove that Copilot MCP negotiation works.' -ForegroundColor Yellow
+    Write-Section 'NEXT: VERIFY THE MCP CONNECTION'
+    Write-Host '  1  Open a fresh terminal in your project folder.'
+    Write-Host '  2  Run copilot, then open /mcp.'
+    Write-Host '  3  Once connected, paste this verification prompt:'
+    Write-Host ''
+    Write-Host "Use only MCP $($script:Team.serverName)." -ForegroundColor Gray
+    Write-Host 'Call STS GetCallerIdentity separately for every profile, setting aws_profile explicitly:' -ForegroundColor Gray
+    Write-Host ($Profiles -join ', ') -ForegroundColor Cyan
+    Write-Host 'Return account and ARN for each. Do not use shell or AWS CLI. Do not modify AWS resources.' -ForegroundColor Gray
+    Write-Host ''
+    Write-Status 'PENDING' 'MCP connection has not been tested by this installer.' Yellow
+    Write-Host '  Copilot has not been launched. Normal usage charges may apply to the prompt.' -ForegroundColor DarkGray
+    Write-Host '  Detailed paths and ARNs: run setup.ps1 with -Verbose.' -ForegroundColor DarkGray
 }
 
 function Run-Setup {
@@ -235,11 +287,13 @@ function Run-Check([bool]$Login) {
     $config = Read-Mcp
     $profiles = @(Get-ConfiguredProfiles)
     $entry = $config.mcpServers[$script:Team.serverName]
-    Write-Host "`nConfig: $script:ConfigPath"
-    Write-Host "Command: $($entry.command)"
+    Write-Section 'MCP CONFIGURATION'
+    Write-Verbose "Config: $script:ConfigPath"
+    Write-Verbose "Command: $($entry.command)"
     if (-not (Test-Path -LiteralPath $entry.command -PathType Leaf)) { throw 'Configured executable does not exist.' }
-    if ($entry.Contains('timeout')) { Write-Host "Timeout: $($entry.timeout) ms" }
-    Write-Host "Profile allowlist: $($profiles -join ', ')"
+    if ($entry.Contains('timeout')) { Write-Host "  Connection timeout: $($entry.timeout) ms" }
+    Write-Status 'OK' "Local entry found: $($script:Team.serverName)"
+    $rows = @()
     if ($Login) {
         # Honor custom paths from the MCP entry so CLI validation uses the same files.
         $saved = @{}
@@ -250,12 +304,18 @@ function Run-Check([bool]$Login) {
             }
             foreach ($p in $profiles) {
                 $id = Test-Identity $p $true
-                Write-Host "[STS OK] $p -> $($id.Account) | $($id.Arn)"
+                Write-Status 'STS OK' $p
+                Write-Verbose "${p}: $($id.Arn)"
+                $rows += [pscustomobject]@{Profile=$p; Account=$id.Account; Status='Verified by STS'}
             }
         } finally {
             foreach ($key in $saved.Keys) { [Environment]::SetEnvironmentVariable($key, $saved[$key]) }
         }
-    } else { Write-Host 'Local check only: no AWS login, API call or MCP connection attempted.' }
+    } else {
+        foreach ($p in $profiles) { $rows += [pscustomobject]@{Profile=$p;Account='Not checked';Status='Local config only'} }
+        Write-Host '  No AWS login or API calls were made.' -ForegroundColor Gray
+    }
+    Show-ProfileSummary $rows
     Show-FinalPrompt $profiles
 }
 
@@ -296,10 +356,9 @@ try {
     $copilotDir = if ($env:COPILOT_HOME) { [IO.Path]::GetFullPath($env:COPILOT_HOME) } else { Join-Path $env:USERPROFILE '.copilot' }
     $script:ConfigPath = Join-Path $copilotDir 'mcp-config.json'
     $script:StateRoot = Join-Path $env:LOCALAPPDATA 'AwsMcpSetup\backups'
-    Write-Host "`nAWS MCP / Copilot CLI setup - pilot 0.2.1" -ForegroundColor Cyan
-    Write-Host 'Direct proxy executable; tested package version; 120-second connection budget by default.'
+    Show-Banner
     if ($Mode -eq 'Menu') {
-        Write-Host "`n1. Set up MCP with AWS profiles`n2. Check local configuration (no AWS calls)`n3. Check AWS identities / log in if needed`n4. Roll back MCP configuration`n0. Exit"
+        Show-MainMenu
         $Mode = switch (Read-Host 'Choose [1-4, 0]') { '1' {'Setup'} '2' {'Check'} '3' {'Login'} '4' {'Rollback'} default {'Exit'} }
     }
     switch ($Mode) {
@@ -310,7 +369,8 @@ try {
     }
     exit 0
 } catch {
-    Write-Host "`n[STOPPED] $($_.Exception.Message)" -ForegroundColor Red
+    Write-Section 'TASK STOPPED'
+    Write-Status 'ERROR' $_.Exception.Message Red
     Write-Host 'No automatic security-policy changes or forced retries were made. Installed packages, if any, remain installed. See README.md.'
     exit 1
 } finally {

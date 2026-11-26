@@ -1,4 +1,4 @@
-AWS MCP setup pilot 0.2.1 - validation report
+AWS MCP setup pilot 0.2.2 - validation report
 Date: 2026-11-26
 Runtime: PowerShell 7.4.13 on Linux
 
@@ -53,3 +53,7 @@ manual pilot; this installer still needs a Windows pilot before broad rollout.
 Windows pilot observation (user screenshots, 2026-11-26): option 2 passed.
 Option 3 completed browser SSO but failed reading Account before the 0.2.1 fix.
 The fixed SSO path still needs confirmation on the user workstation.
+
+0.2.2 presentation verification: header, menu, profile summary, and both Check
+paths rendered locally with mocked tools and identities. All 118 offline
+assertions passed again. Windows terminal appearance still needs user review.

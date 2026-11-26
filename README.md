@@ -4,7 +4,7 @@ An interactive Windows setup assistant for **AWS MCP + GitHub Copilot CLI**, usi
 
 Select two or more AWS profiles, verify the accounts, and let setup configure the local proxy. Missing tools can be installed through WinGet after confirmation. Existing MCP servers are preserved and the managed entry can be rolled back.
 
-**Status: community beta, v0.2.1.** Offline tests cover configuration, prerequisites and workflow behavior. The installer still needs an end-to-end Windows pilot; see [validation results](TEST_RESULTS.txt). This is an independent community project, not an official AWS or GitHub product.
+**Status: community beta, v0.2.2.** Offline tests cover configuration, prerequisites and workflow behavior. The installer still needs an end-to-end Windows pilot; see [validation results](TEST_RESULTS.txt). This is an independent community project, not an official AWS or GitHub product.
 
 This installs/reuses the AWS MCP Proxy locally, selects two or more AWS profiles and configures Copilot CLI to launch the proxy executable directly. It uses proxy package `2.0.0` and a Copilot server `timeout` of `120000` milliseconds by default. It does not install Docker, switch to OAuth or configure VS Code Chat.
 
@@ -79,6 +79,19 @@ From PowerShell 7, optional direct commands are:
 ```
 
 No `copilot -p` invocation or paid AI prompt is run automatically. Version checks invoke `copilot --version`; they do not prove Copilot authentication or MCP connectivity.
+
+## Terminal display
+
+Version 0.2.2 adds a colored header, descriptive menu options, short tool statuses and a profile/account/status table for Check and Login. Status words remain visible without color. The main menu numbers and configuration behavior are unchanged.
+
+Local checks show **Local config only**; successful identity checks show **Verified by STS**. Neither claims that the MCP connection has been tested. Full tool paths, configuration paths and identity ARNs are available in verbose diagnostics:
+
+```powershell
+.\setup.ps1 -Mode Check -Verbose
+.\setup.ps1 -Mode Login -Verbose
+```
+
+Login diagnostics can request browser SSO and call STS. Review diagnostic output before sharing it; ARNs can identify your account and user. Setup still displays the complete identity before asking you to confirm an account.
 
 ## What to set once for the team
 
