@@ -4,7 +4,7 @@ An interactive Windows setup assistant for **AWS MCP + GitHub Copilot CLI**, usi
 
 Select two or more AWS profiles, verify the accounts, and let setup configure the local proxy. Missing tools can be installed through WinGet after confirmation. Existing MCP servers are preserved and the managed entry can be rolled back.
 
-**Status: community beta, v0.2.0.** Offline tests cover configuration, prerequisites and workflow behavior. The installer still needs an end-to-end Windows pilot; see [validation results](TEST_RESULTS.txt). This is an independent community project, not an official AWS or GitHub product.
+**Status: community beta, v0.2.1.** Offline tests cover configuration, prerequisites and workflow behavior. The installer still needs an end-to-end Windows pilot; see [validation results](TEST_RESULTS.txt). This is an independent community project, not an official AWS or GitHub product.
 
 This installs/reuses the AWS MCP Proxy locally, selects two or more AWS profiles and configures Copilot CLI to launch the proxy executable directly. It uses proxy package `2.0.0` and a Copilot server `timeout` of `120000` milliseconds by default. It does not install Docker, switch to OAuth or configure VS Code Chat.
 
@@ -191,6 +191,10 @@ Direct proxy execution plus a 120-second budget restored connectivity in the ori
 
 An exact proxy version does **not** freeze all transitive Python dependencies. The original pilot used Copilot CLI `1.0.115`, proxy `2.0.0`, Python MCP SDK `2.3.0` and FastMCP `4.2.0`. Setup prints the actual CLI/proxy versions but does not automatically downgrade or pin the Copilot installation. A fully locked dependency build and organization-wide package deployment are possible later enhancements.
 
+### Fixed in 0.2.1: SSO login succeeded but Account property was missing
+
+AWS CLI login/wizard output could leak into function return values and cause an `Account` property error after successful browser login. Version 0.2.1 routes interactive CLI output to the console separately from returned identities, profile names and proxy paths. Download the updated package and repeat option 3; do not delete existing AWS profiles or MCP configuration.
+
 ## Included files and tests
 
 - `setup.bat`: double-click launcher; no execution-policy override.
@@ -210,6 +214,7 @@ Run offline tests with:
 pwsh -NoProfile -File .\tests\core.tests.ps1
 pwsh -NoProfile -File .\tests\workflow.tests.ps1
 pwsh -NoProfile -File .\tests\prerequisites.tests.ps1
+pwsh -NoProfile -File .\tests\native-output.tests.ps1
 ```
 
 The code was tested with PowerShell 7 on Linux for syntax and configuration behavior. It has **not been run end-to-end on a Windows workstation with corporate SSO**. Test this pilot package on one workstation before sharing it broadly.

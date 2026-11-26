@@ -30,3 +30,6 @@ jobs:
       - name: Mocked prerequisites
         shell: pwsh
         run: ./tests/prerequisites.tests.ps1
+      - name: CLI output isolation
+        shell: pwsh
+        run: ./tests/native-output.tests.ps1

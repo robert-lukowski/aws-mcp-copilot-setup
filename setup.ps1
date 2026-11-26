@@ -97,7 +97,7 @@ function Select-Profile($Template) {
                 Copy-Item -LiteralPath $awsConfig -Destination $backup
                 Write-Host "AWS config backup: $backup"
             }
-            & $script:Aws configure sso --profile $name
+            & $script:Aws configure sso --profile $name | Out-Host
             if ($LASTEXITCODE -ne 0) { throw 'SSO wizard did not complete. Existing MCP configuration has not been changed.' }
             if (@(Get-Profiles) -notcontains $name) { throw 'The wizard did not create the requested profile.' }
             return $name
@@ -112,14 +112,14 @@ function Test-Identity([string]$Profile, [bool]$AllowLogin) {
     if ($r.Code -ne 0 -and $AllowLogin) {
         Write-Host "STS did not succeed for '$Profile'. The cause may be SSO expiry, connectivity or permissions."
         if (Confirm "Run browser SSO login for '$Profile'?" $true) {
-            & $script:Aws sso login --profile $Profile --no-cli-pager
+            & $script:Aws sso login --profile $Profile --no-cli-pager | Out-Host
             if ($LASTEXITCODE -ne 0) { throw 'SSO login failed. Resolve it in AWS CLI before continuing.' }
             $r = Capture $script:Aws $requestArgs
         }
     }
     if ($r.Code -ne 0) { throw "STS failed for '$Profile'. Run aws sts get-caller-identity --profile $Profile to inspect locally; MCP config is not validated." }
     $identity = $r.Text | ConvertFrom-Json -AsHashtable -ErrorAction Stop
-    if ($identity.Account -notmatch '^\d{12}$' -or -not $identity.Arn) { throw 'Unexpected STS response.' }
+    if ($identity -isnot [System.Collections.IDictionary] -or -not $identity.Contains('Account') -or -not $identity.Contains('Arn') -or $identity.Account -notmatch '^\d{12}$' -or -not $identity.Arn) { throw 'Unexpected STS response.' }
     return ,$identity
 }
 
@@ -137,7 +137,7 @@ function Ensure-Proxy {
         if (-not (Confirm "Installed proxy is not verified as $wanted. Replace the uv-managed tool with $wanted?")) { throw 'Proxy installation cancelled.' }
     }
     Write-Host "Installing proxy $wanted (first run and bytecode compilation can take several minutes)."
-    & $script:Uv tool install --compile-bytecode "mcp-proxy-for-aws-cli==$wanted"
+    & $script:Uv tool install --compile-bytecode "mcp-proxy-for-aws-cli==$wanted" | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'Proxy install failed. No force/reinstall attempted; inspect the uv message above.' }
     if (-not (Test-Path -LiteralPath $proxy)) { throw "Expected executable not found: $proxy" }
     $help = Capture $proxy @('--help')
@@ -296,7 +296,7 @@ try {
     $copilotDir = if ($env:COPILOT_HOME) { [IO.Path]::GetFullPath($env:COPILOT_HOME) } else { Join-Path $env:USERPROFILE '.copilot' }
     $script:ConfigPath = Join-Path $copilotDir 'mcp-config.json'
     $script:StateRoot = Join-Path $env:LOCALAPPDATA 'AwsMcpSetup\backups'
-    Write-Host "`nAWS MCP / Copilot CLI setup - pilot 0.2.0" -ForegroundColor Cyan
+    Write-Host "`nAWS MCP / Copilot CLI setup - pilot 0.2.1" -ForegroundColor Cyan
     Write-Host 'Direct proxy executable; tested package version; 120-second connection budget by default.'
     if ($Mode -eq 'Menu') {
         Write-Host "`n1. Set up MCP with AWS profiles`n2. Check local configuration (no AWS calls)`n3. Check AWS identities / log in if needed`n4. Roll back MCP configuration`n0. Exit"

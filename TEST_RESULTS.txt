@@ -1,4 +1,4 @@
-AWS MCP setup pilot 0.2.0 - validation report
+AWS MCP setup pilot 0.2.1 - validation report
 Date: 2026-11-26
 Runtime: PowerShell 7.4.13 on Linux
 
@@ -32,7 +32,12 @@ PASS: 25 prerequisite assertions (mocked installer calls)
 - Success without a discoverable executable is rejected.
 - New PowerShell files parse without syntax errors.
 
-Total: 108 assertions. WinGet calls are mocked, not real installations.
+PASS: 10 CLI output isolation assertions
+- Reproduced the SSO stdout leak before the fix.
+- Login returns one identity; wizard returns one profile; install returns one executable path.
+- Failed login stops verification; incomplete STS JSON gives a clear error.
+
+Total: 118 assertions. WinGet calls are mocked, not real installations.
 
 Not tested here:
 - Windows BAT/PowerShell 5.1 bootstrap, WinGet installers, UAC, process resolution
@@ -44,3 +49,7 @@ Not tested here:
 No corporate AWS calls or Copilot AI requests were made during these tests.
 The underlying direct-proxy + timeout configuration had worked in the user's
 manual pilot; this installer still needs a Windows pilot before broad rollout.
+
+Windows pilot observation (user screenshots, 2026-11-26): option 2 passed.
+Option 3 completed browser SSO but failed reading Account before the 0.2.1 fix.
+The fixed SSO path still needs confirmation on the user workstation.
